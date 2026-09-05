@@ -105,7 +105,7 @@ pyauth add "GitHub" "1234"
 | Security       | Secrets only in source, not in NVS dump | Secrets in flash, but no re-flash needed |
 | Best for       | Max air-gap, learn CDC fix              | Daily use                                |
 
-**V1 Example (hardcoded) - V2 Fixed (now can upload via python script)**
+**V1 Example (hardcoded):**
 
 ```cpp
 Account accounts[] = {
@@ -113,21 +113,6 @@ Account accounts[] = {
   {"Google", "YOUR SECRET HERE"}
 };
 ```
-
-or
-
-````bash
-
-```bash
-pio run --target upload
-````
-
-```
-
-```
-
-````
-
 
 ### Troubleshooting
 
@@ -139,7 +124,7 @@ pio run --target upload
 sudo chmod 666 /dev/ttyACM0
 # permanent:
 sudo usermod -a -G dialout $USER
-````
+```
 
 **`ModuleNotFoundError: tkinter`:**
 

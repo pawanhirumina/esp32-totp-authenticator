@@ -1,4 +1,3 @@
-cat > pyauth << 'PY'
 #!/usr/bin/env python3
 import serial, time, sys, argparse
 from serial.tools import list_ports
@@ -87,4 +86,3 @@ elif args.cmd=="remove": cmd_remove(args.name)
 elif args.cmd=="codes": cmd_codes()
 elif args.cmd=="clear":
     ser,port=connect(); ser.write(b"CLEAR\n"); print(ser.readline().decode()); ser.close()
-PY
