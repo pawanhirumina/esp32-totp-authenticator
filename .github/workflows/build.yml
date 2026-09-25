@@ -1,0 +1,90 @@
+name: Build ESP32 Firmware
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: |
+          pip install --upgrade platformio esptool
+          pio --version
+
+      - name: Build firmware
+        run: pio run -e esp32-c3-devkitm-1
+
+      - name: Build merged flash binary
+        run: |
+          ls .pio/build/esp32-c3-devkitm-1/
+          esptool.py --chip esp32c3 merge_bin \
+            -o .pio/build/esp32-c3-devkitm-1/firmware-merged.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            0x0000 .pio/build/esp32-c3-devkitm-1/bootloader.bin \
+            0x8000 .pio/build/esp32-c3-devkitm-1/partitions.bin \
+            0x10000 .pio/build/esp32-c3-devkitm-1/firmware.bin
+
+      - name: Rename artifacts
+        run: |
+          cd .pio/build/esp32-c3-devkitm-1/
+          cp firmware.bin esp32-totp-vault-firmware.bin
+          cp firmware-merged.bin esp32-totp-vault-merged.bin
+          sha256sum *.bin > checksums.sha256
+          cat checksums.sha256
+          ls -lh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-firmware-${{ github.sha }}
+          path: |
+            .pio/build/esp32-c3-devkitm-1/esp32-totp-vault-firmware.bin
+            .pio/build/esp32-c3-devkitm-1/esp32-totp-vault-merged.bin
+            .pio/build/esp32-c3-devkitm-1/bootloader.bin
+            .pio/build/esp32-c3-devkitm-1/partitions.bin
+            .pio/build/esp32-c3-devkitm-1/checksums.sha256
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            .pio/build/esp32-c3-devkitm-1/esp32-totp-vault-firmware.bin
+            .pio/build/esp32-c3-devkitm-1/esp32-totp-vault-merged.bin
+            .pio/build/esp32-c3-devkitm-1/bootloader.bin
+            .pio/build/esp32-c3-devkitm-1/partitions.bin
+            .pio/build/esp32-c3-devkitm-1/checksums.sha256
+            pyauth.py
+          generate_release_notes: true
+
+
