@@ -3,8 +3,8 @@ name: Build ESP32 Firmware
 on:
   push:
     branches: [main]
-    tags: ['v*'] 
-    pull_request:
+    tags: ['v*']
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
 
     steps:
       - name: Checkout code
@@ -43,7 +43,7 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32-c3-devkitm-1
 
-      - name: Build merged flash binary (for web flasher / esptool)
+      - name: Build merged flash binary
         run: |
           ls .pio/build/esp32-c3-devkitm-1/
           esptool.py --chip esp32c3 merge_bin \
@@ -58,14 +58,11 @@ jobs:
           cd .pio/build/esp32-c3-devkitm-1/
           cp firmware.bin esp32-totp-vault-firmware.bin
           cp firmware-merged.bin esp32-totp-vault-merged.bin
-          cp firmware.elf esp32-totp-vault.elf 2>/dev/null || true
-          cp bootloader.bin bootloader.bin
-          cp partitions.bin partitions.bin
           sha256sum *.bin > checksums.sha256
           cat checksums.sha256
           ls -lh
 
-      - name: Upload build artifacts (for every push)
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: esp32-firmware-${{ github.sha }}
@@ -77,7 +74,7 @@ jobs:
             .pio/build/esp32-c3-devkitm-1/checksums.sha256
           retention-days: 30
 
-      - name: Create GitHub Release (only on tag)
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
@@ -89,22 +86,5 @@ jobs:
             .pio/build/esp32-c3-devkitm-1/checksums.sha256
             pyauth.py
           generate_release_notes: true
-          body: |
-            ### ESP32-C3 TOTP Vault Firmware
-            
-            **Flash with esptool:**
-            ```bash
-            esptool.py --chip esp32c3 --port /dev/ttyACM0 write_flash -z 0x0 esp32-totp-vault-merged.bin
-            ```
-            Or flash the separate files:
-            ```bash
-            esptool.py --chip esp32c3 --port /dev/ttyACM0 write_flash 0x0 bootloader.bin 0x8000 partitions.bin 0x10000 esp32-totp-vault-firmware.bin
-            ```
-
-            Included:
-            - `esp32-totp-vault-merged.bin` - single file, easiest
-            - `esp32-totp-vault-firmware.bin` + bootloader/partitions
-            - `pyauth.py` CLI
-            - `checksums.sha256`
 
 
