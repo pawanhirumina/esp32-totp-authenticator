@@ -1,4 +1,4 @@
-# ESP32-C3 Offline TOTP Vault
+# ESP32-C3 Offline TOTP Vault (v1.2.0)
 
 **100% offline hardware TOTP authenticator. No WiFi, no cloud, no phone. Secrets never leave the ESP32-C3.**
 
@@ -9,8 +9,6 @@ Built on ESP32-C3-DevKitM-1 / C3 Super Mini + Python CLI.
 ### Features
 
 - Offline: No internet needed, ever
-- V1: Hardcoded secrets in source (max security, air-gapped)
-- V2: Save secrets inside C3 flash, add/remove without re-flashing
 - CLI tool `pyauth` - `list / add / remove / codes / show`
 - Auto time-sync from PC (C3 has no battery)
 - No flashing GUI, progress colors
