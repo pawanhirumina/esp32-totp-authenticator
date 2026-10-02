@@ -158,7 +158,6 @@ void addAccount(String data) {
     return;
   }
 
-  // Check if account already exists
   for (int i = 0; i < accountCount; i++) {
 
     if (strcmp(accounts[i].name, name.c_str()) == 0) {
