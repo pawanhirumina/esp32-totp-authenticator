@@ -203,6 +203,7 @@ void addAccount(String data) {
   saveAccounts();
 
   Serial.println("OK: Added");
+  LedBlink();
 }
 void deleteAccount(String name) {
 
@@ -260,6 +261,7 @@ void clearAccounts() {
   accountCount = 0;
 
   Serial.println("OK: Cleared");
+  LedBlink();
 }
 
 
