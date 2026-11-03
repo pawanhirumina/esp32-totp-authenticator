@@ -91,7 +91,7 @@ pyauth clear
 
 ```bash
 pyauth add Google "otpauth://totp/Google:user%40example.com?secret=dummysecretbase32example&issuer=Google"
-pyauth add GitHub "otpauth://totp/GitHub:user?secret=DUMMYSECRETBASE32EXAMPLE&issuer=GitHub"
+pyauth add GitHub "otpauth://totp/GitHub:user?secret=DUMMYSECRETBASE32EXAMPLE&issuer=Example"
 # name is taken from the URI if you don't give one:
 pyauth add "otpauth://totp/Google:user%40example.com?secret=...&issuer=Google"
 ```
