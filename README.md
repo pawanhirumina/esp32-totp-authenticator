@@ -9,7 +9,10 @@ Built on ESP32-C3-DevKitM-1 / C3 Super Mini + Python CLI.
 ### Features
 
 - Offline: No internet needed, ever
-- CLI tool `pyauth` - `list / add / remove / codes / show`
+- CLI tool `pyauth` - `list / add / remove / codes / show / bulk`
+- TOTP secrets (base32) **and** normal plain-text passwords
+- Auto `otpauth://totp/...` URI parsing - paste the full import URI, the `secret=` is stripped automatically
+- Bulk adding from a file: `pyauth bulk accounts.txt`
 - Auto time-sync from PC (C3 has no battery)
 - No flashing GUI, progress colors
 
@@ -53,8 +56,9 @@ pio run --target upload
 V2 firmware understands:
 
 - `TIME:<unix>` -> sync time
-- `GET` -> return codes
-- `ADD:name:SECRET` -> save permanently
+- `GET` -> return codes (`name|code|secs` for TOTP, `name|password|--` for passwords)
+- `ADD:name:SECRET` -> save permanently as TOTP (default)
+- `ADD:name:SECRET:TYPE` -> save as `totp` or `pass`
 - `DEL:name` -> delete
 - `LIST` -> list saved
 - `CLEAR` -> wipe all
@@ -72,34 +76,66 @@ pip install pyserial --user
 #### 4. Use It
 
 ```bash
-pyauth add Google 1234
-pyauth add GitHub 1234
+pyauth add Google 1234                          # TOTP (base32 secret, auto-detected)
+pyauth add GitHub hunter2                       # normal password (auto-detected)
+pyauth add Work "my p@ss:w0rd" -t pass          # force password type (keep spaces/symbols)
+pyauth add - "-"                                # read password securely from stdin (getpass)
 pyauth list
-pyauth codes          # quick terminal codes
+pyauth codes          # quick terminal codes (passwords show as-is)
 pyauth                # or pyauth show -> GUI, no flashing
 pyauth remove GitHub
 pyauth clear
 ```
 
+**Auto `otpauth://` import** (paste the full URI, `secret=` is stripped automatically):
+
+```bash
+pyauth add Google "otpauth://totp/Google:user%40example.com?secret=dummysecretbase32example&issuer=Google"
+pyauth add GitHub "otpauth://totp/GitHub:user?secret=DUMMYSECRETBASE32EXAMPLE&issuer=Example"
+# name is taken from the URI if you don't give one:
+pyauth add "otpauth://totp/Google:user%40example.com?secret=...&issuer=Google"
+```
+
+**Bulk add** (from a file, one entry per line):
+
+```bash
+cat accounts.txt
+# Google
+Google 12345678901234567890
+# plain password
+GitHub:hunter2
+# full otpauth URI
+otpauth://totp/Google:user%40example.com?secret=dummysecretbase32example&issuer=Google
+
+pyauth bulk accounts.txt
+```
+
+Bulk file formats: `NAME SECRET`, `NAME:SECRET` (use this for passwords with spaces/symbols), or a bare `otpauth://` URI. Lines starting with `#` and blank lines are skipped.
+
 Auto-finds port `/dev/ttyACM0`, `/dev/ttyUSB0`, etc. No more hardcoded port.
 
 ### How to Import from Authenticator App
 
-You need only `secret=` part.
-
-Example:
+**V2:** paste the full `otpauth://` URI - `pyauth` strips the `secret=` part automatically:
 
 ```bash
-pyauth add "Google" "1234"
-pyauth add "GitHub" "1234"
+pyauth add "Google" "otpauth://totp/Google:user%40example.com?secret=dummysecretbase32example&issuer=Google"
 ```
+
+If you prefer, you can still enter just the base32 secret:
+
+```bash
+pyauth add "Google" "DUMMYSECRETBASE32EXAMPLE"
+```
+
+**V1:** secrets are hardcoded in `src/main.cpp` and require re-flash (see V1 vs V2 below).
 
 ### V1 vs V2
 
 | Feature        | V1                                      | V2                                       |
 | -------------- | --------------------------------------- | ---------------------------------------- |
 | Secret storage | `src/main.cpp` hardcoded array          | Preferences (NVS) flash, survives reboot |
-| Add secret     | Edit file + re-flash                    | `pyauth add name secret`                 |
+| Add secret     | Edit file + re-flash                    | `pyauth add name secret` / `pyauth bulk file` (TOTP or password, auto `otpauth://` URI parsing) |
 | Security       | Secrets only in source, not in NVS dump | Secrets in flash, but no re-flash needed |
 | Best for       | Max air-gap, learn CDC fix              | Daily use                                |
 

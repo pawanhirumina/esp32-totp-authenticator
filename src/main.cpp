@@ -18,6 +18,7 @@ bool timeSynced = false;
 struct Account {
   char name[MAX_NAME_LEN];
   char secret[MAX_SECRET_LEN];
+  char type[8];   // "totp" or "pass"
 };
 
 Account accounts[MAX_ACCOUNTS];
@@ -70,6 +71,10 @@ void saveAccounts() {
 
     prefs.putString(nameKey, accounts[i].name);
     prefs.putString(secretKey, accounts[i].secret);
+
+    char typeKey[16];
+    snprintf(typeKey, sizeof(typeKey), "type%d", i);
+    prefs.putString(typeKey, accounts[i].type);
   }
 
   prefs.end();
@@ -110,6 +115,22 @@ void loadAccounts() {
     );
 
     accounts[i].secret[MAX_SECRET_LEN - 1] = '\0';
+
+    char typeKey[16];
+    snprintf(typeKey, sizeof(typeKey), "type%d", i);
+
+    String type = prefs.getString(typeKey, "");
+    if (type.length() == 0) {
+      type = "totp";   // legacy accounts without a type default to TOTP
+    }
+
+    strncpy(
+      accounts[i].type,
+      type.c_str(),
+      7
+    );
+
+    accounts[i].type[7] = '\0';
   }
 
   prefs.end();
@@ -135,13 +156,31 @@ void addAccount(String data) {
     return;
   }
 
+  // data = "name:secret"  or  "name:secret:type"  (type: totp | pass)
   String name = data.substring(0, separator);
-  String secret = data.substring(separator + 1);
+  String rest = data.substring(separator + 1);
+
+  String secret = rest;
+  String type = "totp";
+
+  int second = rest.indexOf(':');
+  if (second >= 0) {
+    String candidate = rest.substring(second + 1);
+    candidate.trim();
+    candidate.toLowerCase();
+    if (candidate == "totp" || candidate == "pass") {
+      type = candidate;
+      secret = rest.substring(0, second);
+    }
+  }
 
   name.trim();
   secret.trim();
-  secret.toUpperCase();
-  secret.replace(" ", "");
+
+  if (type == "totp") {
+    secret.toUpperCase();
+    secret.replace(" ", "");
+  }
 
   if (name.length() == 0 || secret.length() == 0) {
     Serial.println("ERR: Empty name or secret");
@@ -170,6 +209,9 @@ void addAccount(String data) {
 
       accounts[i].secret[MAX_SECRET_LEN - 1] = '\0';
 
+      strncpy(accounts[i].type, type.c_str(), 7);
+      accounts[i].type[7] = '\0';
+
       saveAccounts();
 
       Serial.println("OK: Updated");
@@ -197,6 +239,14 @@ void addAccount(String data) {
   );
 
   accounts[accountCount].secret[MAX_SECRET_LEN - 1] = '\0';
+
+  strncpy(
+    accounts[accountCount].type,
+    type.c_str(),
+    7
+  );
+
+  accounts[accountCount].type[7] = '\0';
 
   accountCount++;
 
@@ -275,7 +325,14 @@ void sendCodes() {
 
   long now = getNow();
 
+  int rem = 30 - (now % 30);
+
   for (int i = 0; i < accountCount; i++) {
+
+    if (strcmp(accounts[i].type, "pass") == 0) {
+      Serial.printf("%s|%s|--\n", accounts[i].name, accounts[i].secret);
+      continue;
+    }
 
     uint8_t hmacKey[32];
 
@@ -290,8 +347,6 @@ void sendCodes() {
     TOTP totp(hmacKey, len);
 
     char* code = totp.getCode(now);
-
-    int rem = 30 - (now % 30);
 
     Serial.printf(
       "%s|%s|%d\n",
