@@ -1,0 +1,7 @@
+INSTALL_DIR="$HOME/.local/bin"
+SCRIPT_NAME="pyauth.py"
+COMMAND_NAME="pyauth"
+
+cp "$SCRIPT_NAME" "$INSTALL_DIR/$COMMAND_NAME"
+
+chmod +x "$INSTALL_DIR/$COMMAND_NAME"

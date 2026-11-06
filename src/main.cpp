@@ -18,7 +18,7 @@ bool timeSynced = false;
 struct Account {
   char name[MAX_NAME_LEN];
   char secret[MAX_SECRET_LEN];
-  char type[8];   // "totp" or "pass"
+  char type[8];
 };
 
 Account accounts[MAX_ACCOUNTS];
